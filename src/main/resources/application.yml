@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: spring-ai-structured-and-streaming-responses
+  ai:
+   openai:
+     api-key: ${OPENAI_API_KEY}
+
+
+logging:
+  level:
+    org:
+      springframework:
+        ai:
+          chat:
+            client:
+              advisor: DEBUG
+
+# this config is important inorder to log request and response related info
