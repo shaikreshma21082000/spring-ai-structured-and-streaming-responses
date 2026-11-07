@@ -1,16 +1,19 @@
 package com.spring.ai.service;
 
 
-import com.spring.ai.advisor.TokenUsageAdvisor;
+import com.spring.ai.dto.Response;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.SafeGuardAdvisor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.converter.BeanOutputConverter;
+import org.springframework.ai.converter.ListOutputConverter;
+import org.springframework.ai.converter.MapOutputConverter;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestParam;
+import reactor.core.publisher.Flux;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -18,26 +21,53 @@ public class OpenAiService {
 
     private final ChatClient chatClient;
 
+    private final ChatClient structuredChatClient;
 
     public String getResponse(String question) {
 
-        SafeGuardAdvisor safeGuardAdvisor = SafeGuardAdvisor.builder()
-                .sensitiveWords(List.of(
-                        // prompt injection (first letter dropped so it matches "Ignore" and "ignore")
-                        "gnore previous instructions",
-                        "gnore all instructions",
-                        "system prompt",
-                        "reveal your prompt",
-                        "jailbreak",
-                        "personal info"))
-                .failureResponse("I can only respond on comic genre topics")
-                .order(10)
-                .build();
-
         return chatClient.prompt()
-                .advisors(List.of(new TokenUsageAdvisor(),safeGuardAdvisor))
                 .user(question)
                 .call()
                 .content();
+    }
+
+    public Flux<String> getStreamResponse(String question) {
+        return chatClient.prompt()
+                .user(question)
+                .stream().content();
+    }
+
+    public Response getEntityResponse(String question) {
+        return structuredChatClient.prompt()
+                .user(question)
+                .call().entity(Response.class);
+    }
+
+    public List<String> getCitiesResponse(String question) {
+        return structuredChatClient.prompt()
+                .user(question)
+                .call()
+                .entity(new ListOutputConverter());
+    }
+
+    public Map<String,Object> getResponseMap(String question) {
+        return structuredChatClient.prompt()
+                .user(question)
+                .call()
+                .entity(new MapOutputConverter());
+    }
+
+    public Response getResponseBean(String question) {
+        return structuredChatClient.prompt()
+                .user(question)
+                .call()
+                .entity(new BeanOutputConverter<Response>(Response.class));
+    }
+
+    public List<Response> getResponseParamBean(String question) {
+        return structuredChatClient.prompt()
+                .user(question)
+                .call()
+                .entity(new ParameterizedTypeReference<List<Response>>(){});
     }
 }
